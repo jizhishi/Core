@@ -11,73 +11,7 @@ import { LyricsView } from '../component/LyricsView'
 import { PlaylistView } from '../component/PlaylistView'
 import { PreferencesCache } from '../util/PreferenceCache'
 import { SourceAdapter } from '../adapter'
-import { window } from '@kit.ArkUI';
-import { deviceInfo } from '@kit.BasicServicesKit';
-
-//————————————————————————
-// 函数名：hengping()
-// 参数：judge:boolean
-// 功能：是否允许播放页自动旋转
-//——————————————————————————
-const TAG = '横屏状态'
-const ORIENTATION: Array<string> = ['垂直', '水平', '反向垂直', '反向水平']
-export function  hengping(judge:boolean){
-  try {
-    if(judge===true){
-      window.getLastWindow(getContext(), (err, data) => { // 获取window实例
-        if (err.code) {
-          console.error(TAG, 'Failed to obtain the top window. Cause: ' + JSON.stringify(err));
-          return;
-        }
-        let windowClass = data;
-        console.info(TAG, 'Succeeded in obtaining the top window. Data: ' + JSON.stringify(data));
-        let names: Array<'status' | 'navigation'> = ['status', 'navigation'];
-        windowClass.setWindowSystemBarEnable(names)
-        windowClass.setWindowKeepScreenOn(true)
-        let orientation = window.Orientation.AUTO_ROTATION; // 设置窗口方向为传感器自动旋转模式。
-        try {
-          windowClass.setPreferredOrientation(orientation, (err) => {
-            if (err.code) {
-              console.error(TAG, 'Failed to set window orientation. Cause: ' + JSON.stringify(err));
-              return;
-            }
-            console.info(TAG, 'Succeeded in setting window orientation.');
-          });
-        } catch (exception) {
-          console.error(TAG, 'Failed to set window orientation. Cause: ' + JSON.stringify(exception));
-        }
-        ;
-      });
-    }else if(judge==false){
-      window.getLastWindow(getContext(), (err, data) => { // 获取window实例
-        if (err.code) {
-          console.error(TAG, 'Failed to obtain the top window. Cause: ' + JSON.stringify(err));
-          return;
-        }
-        let windowClass = data;
-        console.info(TAG, 'Succeeded in obtaining the top window. Data: ' + JSON.stringify(data));
-        let names: Array<'status' | 'navigation'> = ['status', 'navigation'];
-        windowClass.setWindowSystemBarEnable(names)
-        windowClass.setWindowKeepScreenOn(false)
-        let orientation = window.Orientation.UNSPECIFIED; // 设置窗口方向为传感器自动旋转模式。
-        try {
-          windowClass.setPreferredOrientation(orientation, (err) => {
-            if (err.code) {
-              console.error(TAG, 'Failed to set window orientation. Cause: ' + JSON.stringify(err));
-              return;
-            }
-            console.info(TAG, 'Succeeded in setting window orientation.');
-          });
-        } catch (exception) {
-          console.error(TAG, 'Failed to set window orientation. Cause: ' + JSON.stringify(exception));
-        }
-        ;
-      });
-    }
-  } catch (exception) {
-    console.error(TAG, 'judge' + JSON.stringify(exception));
-  }//设置横屏显示
-}
+import {hengping} from '../util/func_byjizhishi'
 
 
 @Builder
@@ -114,9 +48,8 @@ struct Playing {
   private updateTimer: number = -1
   //TAB控制
   private controller: TabsController = new TabsController()
-  @State windowClass: window.Window | null = null //窗口管理器
-  @State statusHeight: number = 0 //状态栏高度
-  @State bottomAvoidAreaHeight: number = 0 //手机底部规避区域高度
+
+
   //上下转场动画
   @State y: string = '0';
   // 歌曲封面-歌词翻转
@@ -156,17 +89,6 @@ struct Playing {
       hengping(true)
     }//手机与折叠判断
     //存在问题：折叠屏形态切换可能需要重新进入页面，解决方案监听currentBreakpoint  x， 问题保留，下版本尝试修复
-    window.getLastWindow(getContext(this), (err, windowClass) => {
-      if (!err.code) { //保存窗口管理器
-        this.windowClass = windowClass //获取状态栏高度
-        this.statusHeight =
-          px2vp(windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM).topRect.height) //获取手机底部规避区域高度
-        this.bottomAvoidAreaHeight =
-          px2vp(windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR).bottomRect.height)
-        // windowClass.setWindowLayoutFullScreen(true)
-      }
-    })
-    //获取避让高度
 
     const player = await avPlayerManager.getAVPlayerInstance()
 
@@ -694,176 +616,7 @@ struct Playing {
     .alignItems(HorizontalAlign.Center)
     .transition({ type: TransitionType.All, opacity: 0.0, translate: { y: 20 } })
   }
-  @Builder
-  //好心人帮我改下函数名哈
-  //————————————————————————
-  // 函数名：Playing_phone()
-  // 参数：null
-  // 功能：手机横屏播放器
-  //——————————————————————————
-  Playing_phone(){
-    Row(){
-      //封面图
-      Image(cover(this.song?.album?.cover ?? "", 512))
-        .width(this.coverWidth.getValue(this.currentBreakpoint))
-        .aspectRatio(1)
-        .borderRadius(24)
-        .padding({left:this.statusHeight,right:18,top:18,bottom:18})//之后修复避让
-        .width('35%')
 
-      Column(){
-        Text(this.song?.name || "未知歌曲")
-          .fontSize(this.getFontSize(this.song?.name ?? "", 24, 24))
-          .fontWeight(FontWeight.Bold)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .fontColor(Color.White)
-          .height(32) // 固定高度确保布局稳定
-
-        Text(this.song?.artists ? this.song.artists.map(artist => artist.name).join(" / ") : "未知艺术家")
-          .fontSize(16)
-          .fontColor('rgba(255, 255, 255, 0.6)')
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .height(24) // 固定高度确保布局稳定
-        this.PlayerControls()
-      }
-      .padding(18)
-      .width('65%')
-      // Column(){
-      //   Column(){
-      //     Column(){
-      //       LyricView22()
-      //     }.height('30%').width('60%')
-      //     Text(this.track?.track.ar.map(item => item.name)[0] +'/'+this.track?.track.name)
-      //       .fontSize(16)
-      //       .maxLines(1)
-      //       .textOverflow({ overflow: TextOverflow.Ellipsis })
-      //       .fontColor('rgba(255, 255, 255, 0.6)')
-      //       .margin({ top: 8})
-      //       .width('60%')
-      //       .textAlign(TextAlign.Center)
-      //     Blank()
-      //       .layoutWeight(1)
-      //
-      //     Column() {
-      //       Row() {
-      //         Button({ type: ButtonType.Circle }) {
-      //           Image(this.getPlayModeResource(this.playMode))
-      //             .width(28)
-      //             .height(28)
-      //             .fillColor(Color.White)
-      //
-      //         }
-      //         .width(44)
-      //         .height(44)
-      //         // .margin(12)
-      //         .backgroundColor('#00000000')
-      //         .onClick(() => {
-      //           this.playMode = globalPlaylist.switchPlayMode()
-      //         })
-      //
-      //
-      //         Button({ type: ButtonType.Circle }) {
-      //           Image($r('app.media.ic_prev'))
-      //             .width(40)
-      //             .height(40)
-      //             .fillColor(Color.White)
-      //         }
-      //         .width(this.buttonSize.getValue(this.currentBreakpoint))
-      //         .height(this.buttonSize.getValue(this.currentBreakpoint))
-      //         // .margin(12)
-      //         .backgroundColor(Color.Transparent)
-      //         .onClick(() => {
-      //           globalPlaylist.playPrevious()
-      //         })
-      //
-      //         Button({ type: ButtonType.Circle }) {
-      //           Image(this.isPlaying ? $r('app.media.pause_round_triangle_fill') : $r('app.media.playing_icon'))
-      //             .width('100%')
-      //             .height('100%')
-      //             .fillColor($r('app.color.play_color'))
-      //           // Text(this.isPlaying_1 ? '󰡫': '󰡫')
-      //           //   .fontSize(this.buttonSize.getValue(this.currentBreakpoint) + 20)
-      //           //   .fontColor($r('app.color.play_color'))
-      //
-      //         }
-      //         .width(this.buttonSize.getValue(this.currentBreakpoint) + 20)
-      //         .height(this.buttonSize.getValue(this.currentBreakpoint) + 20)
-      //         // .margin(12)
-      //         .backgroundColor('#00000000')
-      //         .onClick(() => {
-      //           if (this.isPlaying) {
-      //             this.isPlaying = !this.isPlaying
-      //             this.playerManager.pause()
-      //           } else {
-      //             this.isPlaying = !this.isPlaying
-      //             this.playerManager.play()
-      //           }
-      //         })
-      //
-      //         Button({ type: ButtonType.Circle }) {
-      //           Image($r('app.media.ic_next'))
-      //             .width(40)
-      //             .height(40)
-      //             .fillColor(Color.White)
-      //         }
-      //         .width(this.buttonSize.getValue(this.currentBreakpoint))
-      //         .height(this.buttonSize.getValue(this.currentBreakpoint))
-      //         // .margin(12)
-      //         .backgroundColor(Color.Transparent)
-      //         .onClick(() => {
-      //           globalPlaylist.playNext()
-      //         })
-      //         Button({ type: ButtonType.Circle }) {
-      //           Image($r('app.media.ic_list'))
-      //             .width(28)
-      //             .height(28)
-      //             .fillColor(Color.White)
-      //         }
-      //         .width(44)
-      //         .height(44)
-      //         // .margin(12)
-      //         .backgroundColor('#00000000')
-      //         .onClick(() => {
-      //           if (globalPlaylist.playType == PlayType.PERSONAL_FM) {
-      //             promptAction.showToast({ message: "当前模式下需要保留一点神秘感哦！" })
-      //             return
-      //           }
-      //           this.selector = "playlist"
-      //           this.showPlaylist = true;
-      //         })
-      //       }
-      //       .width('60%')
-      //       .height(this.buttonSize.getValue(this.currentBreakpoint) + 20)
-      //       // .layoutWeight(1)
-      //       .justifyContent(FlexAlign.SpaceAround)
-      //     }
-      //     Column(){
-      //       this.ProgressBar()
-      //
-      //     }.width('60%')
-      //     // this.PlayerControls()
-      //     // .onClick(() => {
-      //     //   // this.isShow=false
-      //     //   this.pageStack.pushPathByName('cloudSearch',this.track?.track.ar.map(item => item.name)[0],true)
-      //     //
-      //     //   // router.replaceUrl({
-      //     //   //   url: "pages/CloudSearch",
-      //     //   //   params: {
-      //     //   //     keywords: this.track?.track.ar.map(item => item.name)[0]
-      //     //   //   }
-      //     //   // })
-      //     // })
-      //     // Text(this.track?.track.ar.map(item => item.name)[0])
-      //   }
-      //   .width('80%')
-      //   .alignItems(HorizontalAlign.Start)
-      //   .padding({left:20,bottom:18,top:18+high_height})
-      //
-      // }.height('100%').alignItems(HorizontalAlign.Center).justifyContent(FlexAlign.Center)
-    }
-  }
   @Builder
   PlayingContent() {
     Column() {
@@ -1083,4 +836,175 @@ struct Playing {
       }
     })
   }
+  @Builder
+  //好心人帮我改下函数名哈
+  //————————————————————————
+  // 函数名：Playing_phone()
+  // 参数：null
+  // 功能：手机横屏播放器
+  //——————————————————————————
+  Playing_phone(){
+    Row(){
+      //封面图
+      Image(cover(this.song?.album?.cover ?? "", 512))
+        .width(this.coverWidth.getValue(this.currentBreakpoint))
+        .aspectRatio(1)
+        .borderRadius(24)
+        .padding({left:30,right:18,top:18,bottom:18})//之后修复避让
+        .width('35%')
+
+      Column(){
+        Text(this.song?.name || "未知歌曲")
+          .fontSize(this.getFontSize(this.song?.name ?? "", 24, 24))
+          .fontWeight(FontWeight.Bold)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .fontColor(Color.White)
+          .height(32) // 固定高度确保布局稳定
+
+        Text(this.song?.artists ? this.song.artists.map(artist => artist.name).join(" / ") : "未知艺术家")
+          .fontSize(16)
+          .fontColor('rgba(255, 255, 255, 0.6)')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .height(24) // 固定高度确保布局稳定
+        this.PlayerControls()
+      }
+      .padding(18)
+      .width('65%')
+      // Column(){
+      //   Column(){
+      //     Column(){
+      //       LyricView22()
+      //     }.height('30%').width('60%')
+      //     Text(this.track?.track.ar.map(item => item.name)[0] +'/'+this.track?.track.name)
+      //       .fontSize(16)
+      //       .maxLines(1)
+      //       .textOverflow({ overflow: TextOverflow.Ellipsis })
+      //       .fontColor('rgba(255, 255, 255, 0.6)')
+      //       .margin({ top: 8})
+      //       .width('60%')
+      //       .textAlign(TextAlign.Center)
+      //     Blank()
+      //       .layoutWeight(1)
+      //
+      //     Column() {
+      //       Row() {
+      //         Button({ type: ButtonType.Circle }) {
+      //           Image(this.getPlayModeResource(this.playMode))
+      //             .width(28)
+      //             .height(28)
+      //             .fillColor(Color.White)
+      //
+      //         }
+      //         .width(44)
+      //         .height(44)
+      //         // .margin(12)
+      //         .backgroundColor('#00000000')
+      //         .onClick(() => {
+      //           this.playMode = globalPlaylist.switchPlayMode()
+      //         })
+      //
+      //
+      //         Button({ type: ButtonType.Circle }) {
+      //           Image($r('app.media.ic_prev'))
+      //             .width(40)
+      //             .height(40)
+      //             .fillColor(Color.White)
+      //         }
+      //         .width(this.buttonSize.getValue(this.currentBreakpoint))
+      //         .height(this.buttonSize.getValue(this.currentBreakpoint))
+      //         // .margin(12)
+      //         .backgroundColor(Color.Transparent)
+      //         .onClick(() => {
+      //           globalPlaylist.playPrevious()
+      //         })
+      //
+      //         Button({ type: ButtonType.Circle }) {
+      //           Image(this.isPlaying ? $r('app.media.pause_round_triangle_fill') : $r('app.media.playing_icon'))
+      //             .width('100%')
+      //             .height('100%')
+      //             .fillColor($r('app.color.play_color'))
+      //           // Text(this.isPlaying_1 ? '󰡫': '󰡫')
+      //           //   .fontSize(this.buttonSize.getValue(this.currentBreakpoint) + 20)
+      //           //   .fontColor($r('app.color.play_color'))
+      //
+      //         }
+      //         .width(this.buttonSize.getValue(this.currentBreakpoint) + 20)
+      //         .height(this.buttonSize.getValue(this.currentBreakpoint) + 20)
+      //         // .margin(12)
+      //         .backgroundColor('#00000000')
+      //         .onClick(() => {
+      //           if (this.isPlaying) {
+      //             this.isPlaying = !this.isPlaying
+      //             this.playerManager.pause()
+      //           } else {
+      //             this.isPlaying = !this.isPlaying
+      //             this.playerManager.play()
+      //           }
+      //         })
+      //
+      //         Button({ type: ButtonType.Circle }) {
+      //           Image($r('app.media.ic_next'))
+      //             .width(40)
+      //             .height(40)
+      //             .fillColor(Color.White)
+      //         }
+      //         .width(this.buttonSize.getValue(this.currentBreakpoint))
+      //         .height(this.buttonSize.getValue(this.currentBreakpoint))
+      //         // .margin(12)
+      //         .backgroundColor(Color.Transparent)
+      //         .onClick(() => {
+      //           globalPlaylist.playNext()
+      //         })
+      //         Button({ type: ButtonType.Circle }) {
+      //           Image($r('app.media.ic_list'))
+      //             .width(28)
+      //             .height(28)
+      //             .fillColor(Color.White)
+      //         }
+      //         .width(44)
+      //         .height(44)
+      //         // .margin(12)
+      //         .backgroundColor('#00000000')
+      //         .onClick(() => {
+      //           if (globalPlaylist.playType == PlayType.PERSONAL_FM) {
+      //             promptAction.showToast({ message: "当前模式下需要保留一点神秘感哦！" })
+      //             return
+      //           }
+      //           this.selector = "playlist"
+      //           this.showPlaylist = true;
+      //         })
+      //       }
+      //       .width('60%')
+      //       .height(this.buttonSize.getValue(this.currentBreakpoint) + 20)
+      //       // .layoutWeight(1)
+      //       .justifyContent(FlexAlign.SpaceAround)
+      //     }
+      //     Column(){
+      //       this.ProgressBar()
+      //
+      //     }.width('60%')
+      //     // this.PlayerControls()
+      //     // .onClick(() => {
+      //     //   // this.isShow=false
+      //     //   this.pageStack.pushPathByName('cloudSearch',this.track?.track.ar.map(item => item.name)[0],true)
+      //     //
+      //     //   // router.replaceUrl({
+      //     //   //   url: "pages/CloudSearch",
+      //     //   //   params: {
+      //     //   //     keywords: this.track?.track.ar.map(item => item.name)[0]
+      //     //   //   }
+      //     //   // })
+      //     // })
+      //     // Text(this.track?.track.ar.map(item => item.name)[0])
+      //   }
+      //   .width('80%')
+      //   .alignItems(HorizontalAlign.Start)
+      //   .padding({left:20,bottom:18,top:18+high_height})
+      //
+      // }.height('100%').alignItems(HorizontalAlign.Center).justifyContent(FlexAlign.Center)
+    }
+  }
 }
+
