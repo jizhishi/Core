@@ -31,7 +31,7 @@ export function  hengping(judge:boolean){
         }
         let windowClass = data;
         console.info(TAG, 'Succeeded in obtaining the top window. Data: ' + JSON.stringify(data));
-        let names: Array<'status' | 'navigation'> = [];
+        let names: Array<'status' | 'navigation'> = ['status', 'navigation'];
         windowClass.setWindowSystemBarEnable(names)
         windowClass.setWindowKeepScreenOn(true)
         let orientation = window.Orientation.AUTO_ROTATION; // 设置窗口方向为传感器自动旋转模式。
@@ -163,7 +163,7 @@ struct Playing {
           px2vp(windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM).topRect.height) //获取手机底部规避区域高度
         this.bottomAvoidAreaHeight =
           px2vp(windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR).bottomRect.height)
-        windowClass.setWindowLayoutFullScreen(true)
+        // windowClass.setWindowLayoutFullScreen(true)
       }
     })
     //获取避让高度
